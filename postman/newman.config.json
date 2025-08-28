@@ -1,0 +1,33 @@
+{
+  "collection": "SIS_API_Collection.json",
+  "environment": "environments/Development.postman_environment.json",
+  "reporters": ["cli", "json", "html"],
+  "reporter": {
+    "html": {
+      "export": "./reports/api-test-report.html",
+      "template": "./templates/custom-template.hbs"
+    },
+    "json": {
+      "export": "./reports/api-test-results.json"
+    }
+  },
+  "iterationCount": 1,
+  "timeoutRequest": 30000,
+  "timeoutScript": 5000,
+  "delayRequest": 0,
+  "ignoreRedirects": false,
+  "insecure": false,
+  "bail": {
+    "folder": false,
+    "failure": false
+  },
+  "suppressExitCode": false,
+  "globalVar": [
+    {
+      "key": "test_run_id",
+      "value": "{{$timestamp}}"
+    }
+  ],
+  "color": "on",
+  "verbose": true
+}

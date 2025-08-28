@@ -1,0 +1,211 @@
+name: Dependency Updates and Security
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  # Check for dependency updates
+  dependency-check:
+    name: Check Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+
+    - name: Check backend dependencies
+      run: |
+        cd backend
+        npm audit --audit-level=moderate
+        npm outdated || true
+
+    - name: Check frontend dependencies
+      run: |
+        cd frontend
+        npm audit --audit-level=moderate
+        npm outdated || true
+
+    - name: Create dependency update PR (Backend)
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { execSync } = require('child_process');
+          
+          try {
+            // Check if there are outdated packages
+            execSync('cd backend && npm outdated --json', { encoding: 'utf8' });
+          } catch (error) {
+            if (error.stdout) {
+              const outdated = JSON.parse(error.stdout);
+              if (Object.keys(outdated).length > 0) {
+                console.log('Found outdated backend dependencies:', Object.keys(outdated));
+                // Here you could create a PR or issue
+              }
+            }
+          }
+
+    - name: Create dependency update PR (Frontend)
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { execSync } = require('child_process');
+          
+          try {
+            execSync('cd frontend && npm outdated --json', { encoding: 'utf8' });
+          } catch (error) {
+            if (error.stdout) {
+              const outdated = JSON.parse(error.stdout);
+              if (Object.keys(outdated).length > 0) {
+                console.log('Found outdated frontend dependencies:', Object.keys(outdated));
+              }
+            }
+          }
+
+  # Security vulnerability scanning
+  security-scan:
+    name: Security Vulnerability Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Snyk security scan
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
+
+    - name: Upload Snyk results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: snyk.sarif
+
+    - name: Run OWASP Dependency Check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'SIS'
+        path: '.'
+        format: 'ALL'
+        args: >
+          --enableRetired
+          --enableExperimental
+
+    - name: Upload OWASP results
+      uses: actions/upload-artifact@v3
+      with:
+        name: dependency-check-report
+        path: reports/
+
+  # License compliance check
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+
+    - name: Install license checker
+      run: npm install -g license-checker
+
+    - name: Check backend licenses
+      run: |
+        cd backend
+        license-checker --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC' --excludePrivatePackages
+
+    - name: Check frontend licenses
+      run: |
+        cd frontend
+        license-checker --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC' --excludePrivatePackages
+
+    - name: Generate license report
+      run: |
+        mkdir -p reports
+        cd backend
+        license-checker --csv --out ../reports/backend-licenses.csv
+        cd ../frontend
+        license-checker --csv --out ../reports/frontend-licenses.csv
+
+    - name: Upload license reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-reports
+        path: reports/
+
+  # Code quality analysis
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dsonar.projectKey=university-sis
+          -Dsonar.organization=university
+          -Dsonar.sources=backend/src,frontend/src
+          -Dsonar.tests=backend/tests,frontend/src
+          -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info,frontend/coverage/lcov.info
+          -Dsonar.test.inclusions=**/*.test.js,**/*.test.jsx,**/*.spec.js,**/*.spec.jsx
+
+  # Performance monitoring
+  performance-check:
+    name: Performance Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+    - name: Analyze bundle size
+      run: |
+        cd frontend
+        npm install -g bundlesize
+        bundlesize || echo "Bundle size analysis completed"
+
+    - name: Lighthouse CI
+      uses: treosh/lighthouse-ci-action@v9
+      with:
+        configPath: './lighthouse.config.js'
+        uploadArtifacts: true
+        temporaryPublicStorage: true

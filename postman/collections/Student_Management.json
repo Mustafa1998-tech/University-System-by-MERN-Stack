@@ -1,0 +1,270 @@
+{
+  "info": {
+    "name": "SIS - Student Management",
+    "description": "Student management endpoints for the SIS API",
+    "version": "1.0.0"
+  },
+  "item": [
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "Get All Students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/students?page=1&limit=10&search=&status=active",
+              "host": ["{{base_url}}"],
+              "path": ["api", "students"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"},
+                {"key": "search", "value": ""},
+                {"key": "status", "value": "active"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains students array', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.data).to.have.property('students');",
+                  "  pm.expect(responseJson.data.students).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Pagination info is present', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.data).to.have.property('pagination');",
+                  "  pm.expect(responseJson.data.pagination).to.have.property('page');",
+                  "  pm.expect(responseJson.data.pagination).to.have.property('limit');",
+                  "});",
+                  "",
+                  "// Store first student ID for subsequent requests",
+                  "pm.test('Store student ID', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  if (responseJson.data.students.length > 0) {",
+                  "    pm.environment.set('studentId', responseJson.data.students[0]._id);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Student by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/students/{{studentId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "students", "{{studentId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Student object is returned', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.data).to.have.property('student');",
+                  "  pm.expect(responseJson.data.student).to.have.property('_id');",
+                  "  pm.expect(responseJson.data.student).to.have.property('studentId');",
+                  "});",
+                  "",
+                  "pm.test('Student has required fields', function () {",
+                  "  const student = pm.response.json().data.student;",
+                  "  pm.expect(student).to.have.property('userId');",
+                  "  pm.expect(student).to.have.property('department');",
+                  "  pm.expect(student).to.have.property('faculty');",
+                  "  pm.expect(student).to.have.property('academicYear');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"STU{{$randomInt}}\",\n  \"userId\": \"{{userId}}\",\n  \"department\": \"{{departmentId}}\",\n  \"faculty\": \"{{facultyId}}\",\n  \"program\": \"{{programId}}\",\n  \"academicYear\": \"2024-2025\",\n  \"admissionDate\": \"2024-09-01\",\n  \"currentSemester\": 1,\n  \"classification\": \"freshman\",\n  \"studyMode\": \"full-time\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/students",
+              "host": ["{{base_url}}"],
+              "path": ["api", "students"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Student created successfully', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.status).to.eql('success');",
+                  "  pm.expect(responseJson.data.student).to.have.property('_id');",
+                  "});",
+                  "",
+                  "pm.test('Store created student ID', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.environment.set('newStudentId', responseJson.data.student._id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Student",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentSemester\": 2,\n  \"gpa\": {\n    \"current\": 3.5,\n    \"cumulative\": 3.2\n  },\n  \"totalCreditsEarned\": 15,\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/students/{{studentId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "students", "{{studentId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Student updated successfully', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.status).to.eql('success');",
+                  "  pm.expect(responseJson.data.student.currentSemester).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Student Enrollments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/students/{{studentId}}/enrollments?semester=current",
+              "host": ["{{base_url}}"],
+              "path": ["api", "students", "{{studentId}}", "enrollments"],
+              "query": [{"key": "semester", "value": "current"}]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Enrollments array is returned', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.data.enrollments).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Student Grades",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/students/{{studentId}}/grades?semester=all",
+              "host": ["{{base_url}}"],
+              "path": ["api", "students", "{{studentId}}", "grades"],
+              "query": [{"key": "semester", "value": "all"}]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Grades array is returned', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.data.grades).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Student Financial Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/students/{{studentId}}/financial",
+              "host": ["{{base_url}}"],
+              "path": ["api", "students", "{{studentId}}", "financial"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Financial status is returned', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.data).to.have.property('financialStatus');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

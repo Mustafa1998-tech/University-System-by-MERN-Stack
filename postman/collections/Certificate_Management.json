@@ -1,0 +1,250 @@
+{
+  "info": {
+    "name": "SIS - Certificate Management",
+    "description": "Certificate generation and verification endpoints",
+    "version": "1.0.0"
+  },
+  "item": [
+    {
+      "name": "Certificates",
+      "item": [
+        {
+          "name": "Generate Graduation Certificate",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/graduation/{{studentId}}?language=en&format=buffer",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "graduation", "{{studentId}}"],
+              "query": [
+                {"key": "language", "value": "en"},
+                {"key": "format", "value": "buffer"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Certificate generated successfully', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.status).to.eql('success');",
+                  "  pm.expect(responseJson.data).to.have.property('pdf');",
+                  "  pm.expect(responseJson.data).to.have.property('verificationCode');",
+                  "});",
+                  "",
+                  "pm.test('Store verification code', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.environment.set('verificationCode', responseJson.data.verificationCode);",
+                  "});",
+                  "",
+                  "pm.test('PDF data is base64 encoded', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  const pdfData = responseJson.data.pdf;",
+                  "  pm.expect(pdfData).to.be.a('string');",
+                  "  pm.expect(pdfData.length % 4).to.eql(0); // Base64 string length should be divisible by 4",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generate Transcript",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/transcript/{{studentId}}?language=ar&format=buffer",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "transcript", "{{studentId}}"],
+              "query": [
+                {"key": "language", "value": "ar"},
+                {"key": "format", "value": "buffer"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Transcript generated successfully', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.status).to.eql('success');",
+                  "  pm.expect(responseJson.data).to.have.property('pdf');",
+                  "  pm.expect(responseJson.data).to.have.property('verificationCode');",
+                  "});",
+                  "",
+                  "pm.test('Store transcript verification code', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.environment.set('transcriptVerificationCode', responseJson.data.verificationCode);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generate Enrollment Certificate",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/enrollment/{{studentId}}?language=en&format=pdf",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "enrollment", "{{studentId}}"],
+              "query": [
+                {"key": "language", "value": "en"},
+                {"key": "format", "value": "pdf"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('PDF file downloaded', function () {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/pdf');",
+                  "  pm.expect(pm.response.headers.get('Content-Disposition')).to.include('attachment');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Certificate",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/verify/{{verificationCode}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "verify", "{{verificationCode}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Certificate verified successfully', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.status).to.eql('success');",
+                  "  pm.expect(responseJson.data).to.have.property('certificate');",
+                  "  pm.expect(responseJson.data.certificate).to.have.property('type');",
+                  "  pm.expect(responseJson.data.certificate).to.have.property('studentInfo');",
+                  "});",
+                  "",
+                  "pm.test('Certificate type is graduation', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.data.certificate.type).to.eql('graduation');",
+                  "});",
+                  "",
+                  "pm.test('Student information is present', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  const studentInfo = responseJson.data.certificate.studentInfo;",
+                  "  pm.expect(studentInfo).to.have.property('studentId');",
+                  "  pm.expect(studentInfo).to.have.property('fullName');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Student Certificates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/student/{{studentId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "student", "{{studentId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Certificates list retrieved', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.status).to.eql('success');",
+                  "  pm.expect(responseJson.data).to.have.property('certificates');",
+                  "  pm.expect(responseJson.data.certificates).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Certificates contain required fields', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  const certificates = responseJson.data.certificates;",
+                  "  if (certificates.length > 0) {",
+                  "    const certificate = certificates[0];",
+                  "    pm.expect(certificate).to.have.property('type');",
+                  "    pm.expect(certificate).to.have.property('verificationCode');",
+                  "    pm.expect(certificate).to.have.property('issuedAt');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Invalid Certificate",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/verify/INVALID123456789012345678901234",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "verify", "INVALID123456789012345678901234"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error message for invalid certificate', function () {",
+                  "  const responseJson = pm.response.json();",
+                  "  pm.expect(responseJson.status).to.eql('error');",
+                  "  pm.expect(responseJson.message).to.include('not found');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

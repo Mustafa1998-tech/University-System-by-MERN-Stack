@@ -1,0 +1,62 @@
+{
+  "name": "sis-university-system",
+  "version": "1.0.0",
+  "description": "Student Information System - Full Stack University Management System",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "dev:full": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:db\"",
+    "dev:db": "docker-compose up mongodb redis -d",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test:integration": "cd backend && npm run test:integration",
+    "test:e2e": "npm run test:e2e:backend",
+    "test:e2e:backend": "cd backend && npm run test:e2e",
+    "seed": "cd backend && npm run seed",
+    "seed:dev": "cd backend && npm run seed:dev",
+    "seed:prod": "cd backend && npm run seed:prod",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "postman:run": "docker run --rm -it -v ${PWD}/postman:/etc/newman postman/newman:latest run SIS_API_Collection.json",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "clean": "rm -rf node_modules backend/node_modules frontend/node_modules",
+    "reset": "npm run clean && npm run install:all"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/sis-university-system.git"
+  },
+  "keywords": [
+    "university",
+    "student-information-system",
+    "mern-stack",
+    "mongodb",
+    "express",
+    "react",
+    "nodejs",
+    "i18n",
+    "multilingual",
+    "arabic",
+    "english"
+  ],
+  "author": "SIS Development Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
