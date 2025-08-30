@@ -14,7 +14,7 @@ COPY package*.json ./
 FROM base AS development
 
 # Install all dependencies
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -34,7 +34,7 @@ CMD ["npm", "start"]
 FROM base AS build
 
 # Install dependencies
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .

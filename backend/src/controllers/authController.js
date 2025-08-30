@@ -6,8 +6,7 @@ const Instructor = require('../models/Instructor');
 const Staff = require('../models/Staff');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
-const sendEmail = require('../utils/email');
-const sendSMS = require('../utils/sms');
+const { sendEmail, sendSMS } = require('../utils/notifications');
 
 // Generate JWT token
 const signToken = (id) => {

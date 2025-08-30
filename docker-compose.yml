@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # MongoDB Database
   mongodb:
@@ -51,7 +49,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: development
-      PORT: 5000
+      PORT: 5001
       MONGODB_URI: mongodb://admin:sis_admin_password@mongodb:27017/sis_university?authSource=admin
       REDIS_URL: redis://redis:6379
       JWT_SECRET: your-super-secret-jwt-key-development
@@ -65,7 +63,7 @@ services:
       ENABLE_SWAGGER: true
       ENABLE_DEBUG_LOGS: true
     ports:
-      - "5000:5000"
+      - "5001:5000"
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -94,8 +92,8 @@ services:
     container_name: sis_frontend
     restart: unless-stopped
     environment:
-      REACT_APP_API_URL: http://localhost:5000/api/v1
-      REACT_APP_SOCKET_URL: http://localhost:5000
+      REACT_APP_API_URL: http://localhost:5001/api/v1
+      REACT_APP_SOCKET_URL: http://localhost:5001
       REACT_APP_DEFAULT_LANGUAGE: en
       REACT_APP_SUPPORTED_LANGUAGES: en,ar
       GENERATE_SOURCEMAP: true

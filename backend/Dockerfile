@@ -20,7 +20,7 @@ COPY package*.json ./
 FROM base AS development
 
 # Install all dependencies (including dev dependencies)
-RUN npm ci --include=dev
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -41,7 +41,7 @@ CMD ["npm", "run", "dev"]
 FROM base AS prod-deps
 
 # Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install --only=production --legacy-peer-deps && npm cache clean --force
 
 # Production stage
 FROM base AS production
