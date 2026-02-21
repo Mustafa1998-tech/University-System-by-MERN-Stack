@@ -29,7 +29,7 @@ jest.mock('react-i18next', () => ({
 }));
 
 // Mock our custom i18n hook
-jest.mock('../hooks/useI18n', () => ({
+jest.mock('./hooks/useI18n', () => ({
   useI18n: () => ({
     t: (key) => key,
     formatDate: (date) => new Date(date).toLocaleDateString(),
@@ -43,7 +43,7 @@ jest.mock('../hooks/useI18n', () => ({
 }));
 
 // Mock API services
-jest.mock('../services/apiService', () => ({
+jest.mock('./services/apiService', () => ({
   get: jest.fn(() => Promise.resolve({ success: true, data: {} })),
   post: jest.fn(() => Promise.resolve({ success: true, data: {} })),
   put: jest.fn(() => Promise.resolve({ success: true, data: {} })),
@@ -53,7 +53,7 @@ jest.mock('../services/apiService', () => ({
   download: jest.fn(() => Promise.resolve({ success: true })),
 }));
 
-jest.mock('../services/authService', () => ({
+jest.mock('./services/authService', () => ({
   login: jest.fn(),
   logout: jest.fn(),
   register: jest.fn(),

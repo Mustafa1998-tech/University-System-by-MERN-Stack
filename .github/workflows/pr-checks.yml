@@ -85,7 +85,7 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-        cache-dependency-path: ${{ matrix.test-type }}/package-lock.json
+        cache-dependency-path: '**/package-lock.json'
 
     - name: Install dependencies
       run: |
@@ -161,7 +161,7 @@ jobs:
         npm ci
         npm run build
       env:
-        REACT_APP_API_URL: http://localhost:5000/api
+        REACT_APP_API_URL: http://localhost:5000/api/v1
         GENERATE_SOURCEMAP: false
 
     - name: Check build artifacts

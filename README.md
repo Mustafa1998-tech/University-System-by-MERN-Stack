@@ -100,12 +100,16 @@ Git
 ### Option 1: Docker Compose (Recommended)
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/sis-university-system.git
-cd sis
+git clone https://github.com/Mustafa1998-tech/University-System-by-MERN-Stack.git
+cd University-System-by-MERN-Stack
 
-# Copy environment files
+# Copy environment files (Linux/macOS)
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
+
+# Copy environment files (PowerShell)
+Copy-Item backend/.env.example backend/.env
+Copy-Item frontend/.env.example frontend/.env
 
 # Start all services
 docker-compose up -d

@@ -108,8 +108,32 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // CORS configuration
+const configuredOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:3005')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const allowedOrigins = new Set(configuredOrigins);
+
+const isLocalDevOrigin = (origin) => {
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin) ||
+    /^https?:\/\/(10|192\.168|172\.(1[6-9]|2\d|3[0-1]))(\.\d{1,3}){2}(:\d+)?$/i.test(origin);
+};
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Allow non-browser clients (curl, server-to-server, health checks).
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.has(origin) || (process.env.NODE_ENV !== 'production' && isLocalDevOrigin(origin))) {
+      return callback(null, true);
+    }
+
+    logger.warn(`Blocked CORS origin: ${origin}`);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language'],
@@ -210,14 +234,24 @@ app.use(errorHandler);
 
 // Database connection
 const connectDB = async () => {
+  const allowStartWithoutDB = process.env.ALLOW_START_WITHOUT_DB === 'true'
+    || process.env.NODE_ENV === 'development';
+
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/sis_university', {
       serverSelectionTimeoutMS: 10000
     });
     
     logger.info(`MongoDB Connected: ${conn.connection.host}`);
+    return true;
   } catch (error) {
     logger.error('MongoDB connection failed:', error);
+
+    if (allowStartWithoutDB) {
+      logger.warn('Starting server without database connection (degraded mode).');
+      return false;
+    }
+
     process.exit(1);
   }
 };
@@ -226,11 +260,14 @@ const connectDB = async () => {
 const PORT = process.env.PORT || 5000;
 
 if (process.env.NODE_ENV !== 'test') {
-  connectDB().then(() => {
+  connectDB().then((dbConnected) => {
     app.listen(PORT, () => {
       logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
       logger.info(`Health check available at: http://localhost:${PORT}/api/${apiVersion}/health`);
       logger.info(`System info available at: http://localhost:${PORT}/api/${apiVersion}/system/info`);
+      if (!dbConnected) {
+        logger.warn('Database disconnected. Model-backed routes will return 503 until DB is available.');
+      }
       if (process.env.ENABLE_SWAGGER === 'true') {
         logger.info(`API Documentation available at: http://localhost:${PORT}/api-docs`);
       }

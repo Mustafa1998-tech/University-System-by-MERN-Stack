@@ -6,7 +6,7 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node src/app.js",
     "dev": "nodemon src/app.js",
-    "build": "npm run lint && npm run test && echo 'Backend build completed'",
+    "build": "cross-env NODE_ENV=test node scripts/buildCheck.js",
     "test": "jest --testTimeout=10000",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -23,7 +23,7 @@
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write src/",
-    "health": "curl -f http://localhost:$PORT/api/health || exit 1"
+    "health": "node -e \"const http=require('http'); const port=process.env.PORT||5000; http.get(`http://localhost:${port}/api/v1/health`, (res) => process.exit(res.statusCode===200?0:1)).on('error', () => process.exit(1));\""
   },
   "dependencies": {
     "express": "^4.18.2",
