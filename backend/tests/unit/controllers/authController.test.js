@@ -1,7 +1,7 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
-const User = require('../../src/models/User');
-const app = require('../../src/app');
+const User = require('../../../src/models/User');
+const app = require('../../../src/app');
 
 describe('Auth Controller', () => {
   describe('POST /api/auth/register', () => {

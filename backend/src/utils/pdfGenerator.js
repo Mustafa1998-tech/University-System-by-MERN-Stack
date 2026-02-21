@@ -96,7 +96,7 @@ class PDFGenerator {
   }
 
   // Add footer with page numbers and verification
-  addFooter(doc, options = {}) {
+  async addFooter(doc, options = {}) {
     const { 
       issueDate = new Date(),
       language = 'en',

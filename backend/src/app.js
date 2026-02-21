@@ -1,5 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -11,42 +13,71 @@ const rateLimit = require('express-rate-limit');
 require('express-async-errors');
 require('dotenv').config();
 
-// Import routes
-const authRoutes = require('./routes/auth');
-const studentRoutes = require('./routes/students');
-const courseRoutes = require('./routes/courses');
-const enrollmentRoutes = require('./routes/enrollments');
-const instructorRoutes = require('./routes/instructors');
-const staffRoutes = require('./routes/staff');
-const departmentRoutes = require('./routes/departments');
-const facultyRoutes = require('./routes/faculties');
-const gradeRoutes = require('./routes/grades');
-const transcriptRoutes = require('./routes/transcripts');
-const attendanceRoutes = require('./routes/attendance');
-const tuitionRoutes = require('./routes/tuition');
-const payrollRoutes = require('./routes/payroll');
-const scholarshipRoutes = require('./routes/scholarships');
-const libraryRoutes = require('./routes/library');
-const eventRoutes = require('./routes/events');
-const alumniRoutes = require('./routes/alumni');
-const housingRoutes = require('./routes/housing');
-const healthRoutes = require('./routes/health');
-const transportationRoutes = require('./routes/transportation');
-const researchRoutes = require('./routes/research');
-const publicationRoutes = require('./routes/publications');
-const internshipRoutes = require('./routes/internships');
-const notificationRoutes = require('./routes/notifications');
-const reportRoutes = require('./routes/reports');
-const auditRoutes = require('./routes/audit');
-const certificateRoutes = require('./routes/certificateRoutes');
-
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
-const i18n = require('./middleware/i18n');
+const { i18nMiddleware } = require('./middleware/i18n');
 const logger = require('./utils/logger');
 
 const app = express();
+const apiVersion = process.env.API_VERSION || 'v1';
+const routesDirectory = path.join(__dirname, 'routes');
+
+const routeRegistry = [
+  { mountPath: '/auth', file: 'auth.js' },
+  { mountPath: '/students', file: 'students.js' },
+  { mountPath: '/courses', file: 'courses.js' },
+  { mountPath: '/enrollments', file: 'enrollments.js' },
+  { mountPath: '/instructors', file: 'instructors.js' },
+  { mountPath: '/staff', file: 'staff.js' },
+  { mountPath: '/departments', file: 'departments.js' },
+  { mountPath: '/faculties', file: 'faculties.js' },
+  { mountPath: '/grades', file: 'grades.js' },
+  { mountPath: '/transcripts', file: 'transcripts.js' },
+  { mountPath: '/attendance', file: 'attendance.js' },
+  { mountPath: '/tuition', file: 'tuition.js' },
+  { mountPath: '/payroll', file: 'payroll.js' },
+  { mountPath: '/scholarships', file: 'scholarships.js' },
+  { mountPath: '/library', file: 'library.js' },
+  { mountPath: '/events', file: 'events.js' },
+  { mountPath: '/alumni', file: 'alumni.js' },
+  { mountPath: '/housing', file: 'housing.js' },
+  { mountPath: '/health', file: 'health.js' },
+  { mountPath: '/transportation', file: 'transportation.js' },
+  { mountPath: '/research', file: 'research.js' },
+  { mountPath: '/publications', file: 'publications.js' },
+  { mountPath: '/internships', file: 'internships.js' },
+  { mountPath: '/notifications', file: 'notifications.js' },
+  { mountPath: '/reports', file: 'reports.js' },
+  { mountPath: '/audit', file: 'audit.js' },
+  { mountPath: '/certificates', file: 'certificateRoutes.js' },
+  { mountPath: '/files', file: 'files.js' }
+];
+
+function registerAvailableRoutes(router) {
+  const loadedRoutes = [];
+  const missingRoutes = [];
+
+  routeRegistry.forEach((route) => {
+    const routeFilePath = path.join(routesDirectory, route.file);
+
+    if (!fs.existsSync(routeFilePath)) {
+      missingRoutes.push(route.mountPath);
+      return;
+    }
+
+    try {
+      const routeModule = require(routeFilePath);
+      router.use(route.mountPath, routeModule);
+      loadedRoutes.push(route.mountPath);
+    } catch (error) {
+      missingRoutes.push(route.mountPath);
+      logger.warn(`Failed to load route module ${route.file}: ${error.message}`);
+    }
+  });
+
+  return { loadedRoutes, missingRoutes };
+}
 
 // Trust proxy for accurate IP addresses
 app.set('trust proxy', 1);
@@ -102,13 +133,13 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // Internationalization
-app.use(i18n);
+app.use(i18nMiddleware);
 
 // Static files
 app.use('/uploads', express.static('uploads'));
 
 // Health check endpoint
-app.get('/api/v1/health', (req, res) => {
+app.get(`/api/${apiVersion}/health`, (req, res) => {
   res.status(200).json({
     status: 'success',
     message: 'SIS API is running smoothly',
@@ -125,36 +156,26 @@ app.get('/api/v1/health', (req, res) => {
 
 // API routes
 const apiRouter = express.Router();
+const routeStatus = registerAvailableRoutes(apiRouter);
 
-apiRouter.use('/auth', authRoutes);
-apiRouter.use('/students', studentRoutes);
-apiRouter.use('/courses', courseRoutes);
-apiRouter.use('/enrollments', enrollmentRoutes);
-apiRouter.use('/instructors', instructorRoutes);
-apiRouter.use('/staff', staffRoutes);
-apiRouter.use('/departments', departmentRoutes);
-apiRouter.use('/faculties', facultyRoutes);
-apiRouter.use('/grades', gradeRoutes);
-apiRouter.use('/transcripts', transcriptRoutes);
-apiRouter.use('/attendance', attendanceRoutes);
-apiRouter.use('/tuition', tuitionRoutes);
-apiRouter.use('/payroll', payrollRoutes);
-apiRouter.use('/scholarships', scholarshipRoutes);
-apiRouter.use('/library', libraryRoutes);
-apiRouter.use('/events', eventRoutes);
-apiRouter.use('/alumni', alumniRoutes);
-apiRouter.use('/housing', housingRoutes);
-apiRouter.use('/health', healthRoutes);
-apiRouter.use('/transportation', transportationRoutes);
-apiRouter.use('/research', researchRoutes);
-apiRouter.use('/publications', publicationRoutes);
-apiRouter.use('/internships', internshipRoutes);
-apiRouter.use('/notifications', notificationRoutes);
-apiRouter.use('/reports', reportRoutes);
-apiRouter.use('/audit', auditRoutes);
-apiRouter.use('/certificates', certificateRoutes);
+apiRouter.get('/system/info', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    service: 'SIS Backend API',
+    apiVersion,
+    environment: process.env.NODE_ENV || 'development',
+    uptimeSeconds: Math.floor(process.uptime()),
+    nodeVersion: process.version,
+    loadedRoutes: routeStatus.loadedRoutes,
+    missingRoutes: routeStatus.missingRoutes
+  });
+});
 
-app.use(`/api/${process.env.API_VERSION || 'v1'}`, apiRouter);
+if (routeStatus.missingRoutes.length > 0) {
+  logger.warn(`Skipping unavailable route modules: ${routeStatus.missingRoutes.join(', ')}`);
+}
+
+app.use(`/api/${apiVersion}`, apiRouter);
 
 // Swagger documentation
 if (process.env.ENABLE_SWAGGER === 'true') {
@@ -171,7 +192,7 @@ if (process.env.ENABLE_SWAGGER === 'true') {
       },
       servers: [
         {
-          url: `http://localhost:${process.env.PORT || 5000}/api/v1`,
+          url: `http://localhost:${process.env.PORT || 5000}/api/${apiVersion}`,
           description: 'Development server',
         },
       ],
@@ -191,8 +212,7 @@ app.use(errorHandler);
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/sis_university', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 10000
     });
     
     logger.info(`MongoDB Connected: ${conn.connection.host}`);
@@ -209,7 +229,8 @@ if (process.env.NODE_ENV !== 'test') {
   connectDB().then(() => {
     app.listen(PORT, () => {
       logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-      logger.info(`Health check available at: http://localhost:${PORT}/api/v1/health`);
+      logger.info(`Health check available at: http://localhost:${PORT}/api/${apiVersion}/health`);
+      logger.info(`System info available at: http://localhost:${PORT}/api/${apiVersion}/system/info`);
       if (process.env.ENABLE_SWAGGER === 'true') {
         logger.info(`API Documentation available at: http://localhost:${PORT}/api-docs`);
       }

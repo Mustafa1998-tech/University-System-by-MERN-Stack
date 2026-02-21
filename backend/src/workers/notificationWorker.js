@@ -6,7 +6,6 @@ require('dotenv').config();
 
 // Import models
 require('../models/User');
-require('../models/Notification');
 
 // Logger setup
 const winston = require('winston');
@@ -24,8 +23,12 @@ const logger = winston.createLogger({
 class NotificationWorker {
   constructor() {
     this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.redis.on('error', (error) => {
+      logger.warn(`Redis connection issue: ${error.message}`);
+    });
     this.emailTransporter = null;
     this.twilioClient = null;
+    this.notificationModel = null;
     this.isProcessing = false;
     
     this.initializeServices();
@@ -35,33 +38,46 @@ class NotificationWorker {
     try {
       // Connect to MongoDB
       await mongoose.connect(process.env.MONGODB_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
+        serverSelectionTimeoutMS: 10000
       });
       logger.info('Connected to MongoDB');
 
+      // Notification model is optional in this repository.
+      try {
+        this.notificationModel = mongoose.model('Notification');
+      } catch (error) {
+        logger.warn('Notification model not found. Status updates will be skipped.');
+      }
+
       // Initialize email service
-      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-        this.emailTransporter = nodemailer.createTransporter({
+      const emailUser = process.env.EMAIL_USER || process.env.EMAIL_USERNAME;
+      const emailPass = process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
+
+      if (emailUser && emailPass) {
+        this.emailTransporter = nodemailer.createTransport({
           service: process.env.EMAIL_SERVICE || 'gmail',
           host: process.env.EMAIL_HOST,
-          port: process.env.EMAIL_PORT,
+          port: parseInt(process.env.EMAIL_PORT, 10) || 587,
           secure: process.env.EMAIL_SECURE === 'true',
           auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
+            user: emailUser,
+            pass: emailPass
           }
         });
         logger.info('Email service initialized');
       }
 
       // Initialize SMS service
-      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-        this.twilioClient = twilio(
-          process.env.TWILIO_ACCOUNT_SID,
-          process.env.TWILIO_AUTH_TOKEN
-        );
-        logger.info('SMS service initialized');
+      const sid = process.env.TWILIO_ACCOUNT_SID;
+      const token = process.env.TWILIO_AUTH_TOKEN;
+
+      if (sid && token && !sid.startsWith('your-') && !token.startsWith('your-')) {
+        try {
+          this.twilioClient = twilio(sid, token);
+          logger.info('SMS service initialized');
+        } catch (error) {
+          logger.warn(`Invalid Twilio configuration. SMS notifications disabled: ${error.message}`);
+        }
       }
 
       // Start processing
@@ -190,15 +206,18 @@ class NotificationWorker {
   }
 
   async updateNotificationStatus(notificationId, status, errorMessage = null) {
+    if (!this.notificationModel) {
+      return;
+    }
+
     try {
-      const Notification = mongoose.model('Notification');
       const updateData = { 
         status,
         sentAt: status === 'sent' ? new Date() : undefined,
         errorMessage: status === 'failed' ? errorMessage : undefined
       };
 
-      await Notification.findByIdAndUpdate(notificationId, updateData);
+      await this.notificationModel.findByIdAndUpdate(notificationId, updateData);
       logger.info(`Updated notification ${notificationId} status to ${status}`);
       
     } catch (error) {

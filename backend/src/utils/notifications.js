@@ -1,13 +1,25 @@
 const nodemailer = require('nodemailer');
 const twilio = require('twilio');
 const logger = require('./logger');
-const { getMessage } = require('../middleware/i18n');
 
 // Email configuration
 const createEmailTransporter = () => {
+  const emailEnabled = process.env.ENABLE_EMAIL_NOTIFICATIONS !== 'false';
+  const hasCredentials = Boolean(process.env.EMAIL_USERNAME && process.env.EMAIL_PASSWORD);
+
+  if (!emailEnabled) {
+    logger.info('Email notifications are disabled by configuration.');
+    return null;
+  }
+
+  if (!hasCredentials) {
+    logger.warn('Email credentials are missing. Email notifications disabled.');
+    return null;
+  }
+
   const config = {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT) || 587,
+    port: parseInt(process.env.EMAIL_PORT, 10) || 587,
     secure: false, // true for 465, false for other ports
     auth: {
       user: process.env.EMAIL_USERNAME,
@@ -15,17 +27,30 @@ const createEmailTransporter = () => {
     }
   };
 
-  return nodemailer.createTransporter(config);
+  return nodemailer.createTransport(config);
 };
 
 // SMS configuration (Twilio)
 const createSMSClient = () => {
-  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+
+  if (
+    !sid ||
+    !token ||
+    sid.startsWith('your-') ||
+    token.startsWith('your-')
+  ) {
     logger.warn('Twilio credentials not configured. SMS notifications disabled.');
     return null;
   }
 
-  return twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+  try {
+    return twilio(sid, token);
+  } catch (error) {
+    logger.warn(`Invalid Twilio configuration. SMS notifications disabled: ${error.message}`);
+    return null;
+  }
 };
 
 const emailTransporter = createEmailTransporter();
@@ -140,6 +165,11 @@ function processTemplate(templateName, language, variables) {
 
 // Send email notification
 async function sendEmail(options) {
+  if (!emailTransporter) {
+    logger.warn('Email transporter not configured. Skipping email notification.');
+    return { success: false, reason: 'Email not configured' };
+  }
+
   try {
     const {
       to,
