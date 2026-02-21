@@ -73,6 +73,9 @@ jobs:
   security-scan:
     name: Security Vulnerability Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
     - name: Checkout code
@@ -86,8 +89,8 @@ jobs:
         args: --severity-threshold=high
 
     - name: Upload Snyk results
-      uses: github/codeql-action/upload-sarif@v2
-      if: always()
+      if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+      uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: snyk.sarif
 
@@ -102,7 +105,7 @@ jobs:
           --enableExperimental
 
     - name: Upload OWASP results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: dependency-check-report
         path: reports/
@@ -143,7 +146,7 @@ jobs:
         license-checker --csv --out ../reports/frontend-licenses.csv
 
     - name: Upload license reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: license-reports
         path: reports/
